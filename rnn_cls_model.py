@@ -1,13 +1,13 @@
 import torch.nn as nn
 import torch
 
-from rnn import EmbGRU
+from rnn import EmbLSTM
 
 
 class RNNClsModel(nn.Module):
     def __init__(self, config, data_handler, is_train):
         super(RNNClsModel, self).__init__()
-        self.bigru = EmbGRU.from_config(config, data_handler.tokenizer)
+        self.bilstm = EmbLSTM.from_config(config, data_handler.tokenizer)
         self.log_softmax = nn.LogSoftmax(dim=1)
         self.is_train = is_train
 
@@ -20,7 +20,7 @@ class RNNClsModel(nn.Module):
         self.criterion = nn.NLLLoss()
 
     def forward(self, tok_sent_padded, len_sents):
-        _, gru_pooled = self.bigru(tok_sent_padded, len_sents)  # n, t, d
+        _, gru_pooled = self.bilstm(tok_sent_padded, len_sents)  # n, t, d
         logits_label1 = self.hidden2label1(gru_pooled)
         logits_label2 = self.hidden2label2(gru_pooled)
 
@@ -40,7 +40,7 @@ class RNNClsModel(nn.Module):
         return label1_pred, label2_pred
 
     def make_optimizer(self, lr, lr_emb=0.5):
-        embedding_params = self.bigru.word_embedding.parameters()
+        embedding_params = self.bilstm.word_embedding.parameters()
         id_embedding_params = list(map(id, embedding_params))
         base_params = filter(lambda p: id(p) not in id_embedding_params,
                              self.parameters())

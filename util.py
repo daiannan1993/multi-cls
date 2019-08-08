@@ -6,12 +6,17 @@ import torch
 def process_csv(path):
     data_df = pd.read_csv(path,
                           header=0,
-                          sep=',',
-                          usecols=['标准故障点', '标准故障描述', '标准问'])
-    data_df.rename(columns={'标准故障点': 'label1',
+                          sep='\t',
+                          usecols=['泛化语料', '标准故障配置', '标准故障描述'])
+    data_df.rename(columns={'标准故障配置': 'label1',
                             '标准故障描述': 'label2',
-                            '标准问': 'text'},
+                            '泛化语料': 'text'},
                    inplace=True)
+    label = []
+    for idx, series in data_df.iterrows():
+        label.append('+'.join([series['label1'], series['label2']]))
+    data_df['label_com'] = label
+
     return data_df
 
 
@@ -25,6 +30,7 @@ def process_paths(in_paths):
     for key, value in in_paths.items():
         out_paths[key] = process_path(value)
     return out_paths
+
 
 # https://github.com/leigh-plt/cs231n_hw2018/blob/master/assignment2/pytorch_tutorial.ipynb
 def save_checkpoint(checkpoint_path, model, optimizer):

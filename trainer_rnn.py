@@ -28,8 +28,8 @@ class TrainerRNN:
             self.train(train_loader, model, optimizer)
 
             with torch.no_grad():
-                acc_label1, acc_label2 = self.eval(test_loader, model)
-                acc = acc_label1 + acc_label2
+                acc_label = self.eval(test_loader, model)
+                acc = acc_label
                 if acc > best_acc:
                     save_checkpoint(self.config.paths['path_ckpt'], model, optimizer)
                     best_acc = acc
@@ -67,10 +67,8 @@ class TrainerRNN:
     @staticmethod
     def eval(test_loader, model, during_train=True):
         num_total = 0
-        num_wrong_1 = 0
-        num_wrong_2 = 0
-        bad_cases_1 = []
-        bad_cases_2 = []
+        num_wrong = 0
+        bad_cases = []
         for tok_sent, len_sent, tok_label1, tok_label2, sent in test_loader:
             model.eval()
             tok_sent_padded = pad_sequence(tok_sent, batch_first=True)
@@ -83,47 +81,35 @@ class TrainerRNN:
             for i in range(len(tok_sent)):
                 num_total += 1
 
-                if label1_pred[i] != tok_label1[i]:
-                    num_wrong_1 += 1
+                if label1_pred[i] != tok_label1[i] or label2_pred[i] != tok_label2[i]:
+                    num_wrong += 1
                     if not during_train:
-                        bad_cases_1.append({'text': sent[i],
-                                            'label1_true': tok_label1[i].item(),
-                                            'label1_pred': label1_pred[i]})
+                        bad_cases.append({'text': sent[i],
+                                          'label1_true': tok_label1[i].item(),
+                                          'label1_pred': label1_pred[i],
+                                          'label2_true': tok_label2[i].item(),
+                                          'label2_pred': label2_pred[i]})
 
-                if label2_pred[i] != tok_label2[i]:
-                    num_wrong_2 += 1
-                    if not during_train:
-                        bad_cases_2.append({'text': sent[i],
-                                            'label2_true': tok_label2[i].item(),
-                                            'label2_pred': label2_pred[i]})
-
-        acc_label1 = 1 - (num_wrong_1/num_total)
-        acc_label2 = 1 - (num_wrong_2/num_total)
+        acc_label = 1 - (num_wrong/num_total)
         print("evaluation on test set")
-        print('label1 acc: %1.4f' % acc_label1)
-        print('label2 acc: %1.4f' % acc_label2)
+        print('label acc: %1.4f' % acc_label)
 
         if not during_train:
-            return bad_cases_1, bad_cases_2
+            return bad_cases
         else:  # during train
-            return acc_label1, acc_label2
+            return acc_label
 
     def print_bad_cases(self, data_handler, model, test_loader):
-        bad_cases_1, bad_cases_2 = self.eval(test_loader, model, during_train=False)
+        bad_cases = self.eval(test_loader, model, during_train=False)
 
-        if bad_cases_1:
-            df_bc_1 = pd.DataFrame(bad_cases_1)
-            df_bc_1['label1_true'] = df_bc_1['label1_true'].apply(data_handler.decode_label1)
-            df_bc_1['label1_pred'] = df_bc_1['label1_pred'].apply(data_handler.decode_label1)
-            df_bc_1.to_csv(self.config.paths['path_log'] + 'bad_cases_1.csv', sep='\t', index=False,
-                           columns=['text', 'label1_true', 'label1_pred'])
-
-        if bad_cases_2:
-            df_bc_2 = pd.DataFrame(bad_cases_2)
-            df_bc_2['label2_true'] = df_bc_2['label2_true'].apply(data_handler.decode_label2)
-            df_bc_2['label2_pred'] = df_bc_2['label2_pred'].apply(data_handler.decode_label2)
-            df_bc_2.to_csv(self.config.paths['path_log'] + 'bad_cases_2.csv', sep='\t', index=False,
-                           columns=['text', 'label2_true', 'label2_pred'])
+        if bad_cases:
+            df_bc = pd.DataFrame(bad_cases)
+            df_bc['label1_true'] = df_bc['label1_true'].apply(data_handler.decode_label1)
+            df_bc['label1_pred'] = df_bc['label1_pred'].apply(data_handler.decode_label1)
+            df_bc['label2_true'] = df_bc['label2_true'].apply(data_handler.decode_label2)
+            df_bc['label2_pred'] = df_bc['label2_pred'].apply(data_handler.decode_label2)
+            df_bc.to_csv(self.config.paths['path_log'] + 'bad_cases.csv', sep=',', index=False,
+                         columns=['text', 'label1_true', 'label1_pred', 'label2_true', 'label2_pred'])
 
     def predict(self, data_handler, model, sent):
         model.eval()

@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from torchnlp.samplers import BucketBatchSampler
 from collections import defaultdict
-from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 
 from src.util import process_csv
 
@@ -62,8 +62,9 @@ class DataHandler:
         path_data = self.config.paths['path_data']
         data_df = process_csv(path_data)
 
-        kf = KFold(n_splits=self.config.n_splits, shuffle=True)
-        train_index, test_index = next(kf.split(data_df['text']))
+        kf = StratifiedKFold(n_splits=self.config.n_splits, shuffle=True, random_state=2019)
+        train_index, test_index = next(kf.split(data_df['text'], data_df['label_com']))
+        print('test length: %d' % len(test_index))
 
         train_df = data_df.loc[train_index, :]
         test_df = data_df.loc[test_index, :]

@@ -14,7 +14,7 @@ ext_paths = {
     'path_log': 'logs/',
     'path_embedding': 'resources/char_embedding_tencent_chs.txt',
     'path_libs': 'resources/libs/',
-    'path_data': 'data/failure_record_maxus.csv',
+    'path_data': 'data/failure_maxus_0807.csv',
     'path_ckpt': 'checkpoints/'+name_model+'.tar',
 }
 
@@ -33,7 +33,7 @@ class Config:
     batch_size_test = 16
 
     paths = process_paths(ext_paths)
-    num_epochs = 20
+    num_epochs = 10
 
 
 components = {
